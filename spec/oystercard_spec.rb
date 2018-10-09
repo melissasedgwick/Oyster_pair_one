@@ -3,6 +3,7 @@ require './lib/oystercard'
 describe Oystercard do
 
   let(:station) { double(:station) }
+  let(:station2) { double(:station) }
 
   it "checks for existance of oystercard" do
     expect(subject).to be_instance_of(Oystercard)
@@ -49,19 +50,26 @@ describe Oystercard do
   end
 
   describe '#touch_out' do
-    it { is_expected.to respond_to(:touch_out) }
+    it { is_expected.to respond_to(:touch_out).with(1).argument }
 
     it 'Deduct fare after touching out' do
       subject.top_up(10)
       subject.touch_in(station)
-      expect{subject.touch_out}.to change{ subject.balance}.by -Oystercard::MIN_BALANCE
+      expect{subject.touch_out(station2)}.to change{ subject.balance}.by -Oystercard::MIN_BALANCE
     end
 
-    it 'Forgets entry staion after touching out' do
+    it 'Forgets entry station after touching out' do
       subject.top_up(10)
       subject.touch_in(station)
-      subject.touch_out
+      subject.touch_out(station2)
       expect(subject.entry_station).to eq nil
+    end
+
+    it 'Remembers the exit station after touching out' do
+      subject.top_up(10)
+      subject.touch_in(station)
+      subject.touch_out(station2)
+      expect(subject.exit_station).to eq(station2)
     end
 
 
@@ -83,9 +91,31 @@ describe Oystercard do
     it 'returns false after touching out' do
       subject.top_up 10
       subject.touch_in(station)
-      subject.touch_out
+      subject.touch_out(station2)
       expect(subject.in_journey?).to eq(false)
     end
   end
+
+  describe 'journey history' do
+    it 'returns a hash of previous journey' do
+      subject.top_up 10
+      subject.touch_in(station)
+      subject.touch_out(station2)
+      expect(subject.previous_journey).to eq({entry_station: station, exit_station: station2 })
+    end
+
+    it 'initialises with an empty list of journeys' do
+      expect(subject.all_journeys).to eq([])
+    end
+
+    it 'Adds previous journey to all journeys array' do
+      subject.top_up 10
+      subject.touch_in(station)
+      subject.touch_out(station2)
+      expect(subject.all_journeys).to include(subject.previous_journey)
+    end
+
+  end
+
 
 end
